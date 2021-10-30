@@ -6,7 +6,7 @@ import java.util.ArrayList;
 public class AlphaBeta {
 	public static int miniMax(Board board, Point position, int depth, int alpha, int beta, boolean maximizingPlayer) { // kim
 		if(depth == 0) {
-			return static evaluation of position
+			return static evaluation of position;
 		}
 		
 		board.updateBoard(position.x, position.y);
