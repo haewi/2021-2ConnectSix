@@ -21,6 +21,7 @@ public class Board {
 		}
 	}
 	
+	// 돌 업데이트 파라미터 바꾸기
 	public void updateBoard(int col, int row, int color) {
 		board[col][row] = color;
 	} // seo
