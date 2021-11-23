@@ -11,12 +11,19 @@ public class Board {
 	final static int SPACENUM = 19;
 	
 	int[][] board = new int[SPACENUM][SPACENUM]; // [세로][가로] [row][col]
-	int[][] weight = new int[SPACENUM][SPACENUM];
 	
-	void Board() {
+	Board() {
 		for(int i=0; i<SPACENUM; i++) {
 			for(int j=0; j<SPACENUM; j++) {
 				board[i][j] = EMPTY;
+			}
+		}
+	}
+	
+	Board(Board b) {
+		for(int i=0; i<SPACENUM; i++) {
+			for(int j=0; j<SPACENUM; j++) {
+				board[i][j] = b.board[i][j];
 			}
 		}
 	}
@@ -39,6 +46,10 @@ public class Board {
 		board[row][col] = value;
 	} // seo
 	
+	public void addToBoard(int row, int col, int value) {
+		board[row][col] += value;
+	}
+	
 	public int askBoard(String position) {
 		int col = position.toUpperCase().charAt(0) - 'A';
 		if(col > 'I' - 'A') {
@@ -55,28 +66,27 @@ public class Board {
 		return board[row][col];
 	} // kim
 	
-//	public static void main(String[] args) {
-//		Board b = new Board();
-//		b.updateBoard("E07:F10:K11", RED);
-//		b.updateBoard("D02:T19", BLACK);
-//		b.updateBoard("A01:H13", WHITE);
-//		b.printBoard();
-//		System.out.println("T19 has to be black(2) > " + b.askBoard("T19"));
-//		System.out.println("E07 has to be red(1) > " + b.askBoard("E07"));
-//		System.out.println("A01 has to be white(3) > " + b.askBoard("A01"));
-//		System.out.println("H13 has to be white(3) > " + b.askBoard("H13"));
-//	}
-	
 	public void printBoard() {
+		System.out.println();
+		for(int i=0; i<200; i++)
+			System.out.print("*");
+		System.out.println();
 		for(int row=0; row<SPACENUM; row++) {
 			for(int col=0; col<SPACENUM; col++) {
-				System.out.print(this.board[row][col] + " ");
+				System.out.print(String.format("%7d", this.board[row][col]));
+//				if(row == 10 && col == 8) System.out.print("<");
 			}
 			System.out.println();
+			System.out.println();
 		}
+		for(int i=0; i<200; i++)
+			System.out.print("*");
+		System.out.println();
 	}
 	
-	public ArrayList<Point> getChildMax() {
+	public ArrayList<Point> getChildMax(Board b) {
+		System.out.println("[getChildMax]");
+		b.printBoard();
 		ArrayList<Point> tmpList = new ArrayList<Point>();
 		int beforemax = Integer.MIN_VALUE;
 		int max = Integer.MIN_VALUE;
@@ -84,6 +94,7 @@ public class Board {
 		
 		for(int row=0; row<SPACENUM; row++) {
 			for(int col=0; col<SPACENUM; col++) {
+				if(b.askBoard(row, col) != EMPTY) continue;
 				if (this.askBoard(row, col) > max) {
 					max = this.askBoard(row, col);
 					maxPoint.x = row;
@@ -97,15 +108,15 @@ public class Board {
 		
 		for (int k = 0; k<4 ; k++) {
 			for(int row=0; row<SPACENUM; row++) {
-				for(int col=0; col<SPACENUM; col++) {
-//					this.updateBoard(row, col, EMPTY);
-					if (this.askBoard(row, col) <= beforemax && this.askBoard(row, col) > max) {
-						//tmpList안에 있는 좌표일 경우 continue
-						for(Point tmpPoint : tmpList) {
-							if(tmpPoint.x==row && tmpPoint.y ==col) {
-								continue;
-							}
+				all: for(int col=0; col<SPACENUM; col++) {
+					if(b.askBoard(row, col) != EMPTY) continue;
+					//tmpList안에 있는 좌표일 경우 continue
+					for(Point tmpPoint : tmpList) {
+						if(tmpPoint.x==row && tmpPoint.y ==col) {
+							continue all;
 						}
+					}
+					if (this.askBoard(row, col) <= beforemax && this.askBoard(row, col) > max) {
 						max = this.askBoard(row, col);
 						maxPoint.x = row;
 						maxPoint.y = col;
@@ -118,7 +129,7 @@ public class Board {
 		return tmpList;
 	} // seo
 	
-	public ArrayList<Point> getChildMin() {
+	public ArrayList<Point> getChildMin(Board b) {
 		ArrayList<Point> tmpList = new ArrayList<Point>();
 		int beforemin = Integer.MAX_VALUE;
 		int min = Integer.MAX_VALUE;
@@ -126,6 +137,7 @@ public class Board {
 		
 		for(int row=0; row<SPACENUM; row++) {
 			for(int col=0; col<SPACENUM; col++) {
+				if(b.askBoard(row, col) != EMPTY) continue;
 				if (this.askBoard(row, col) < min) {
 					min = this.askBoard(row, col);
 					minPoint.x = row;
@@ -140,7 +152,7 @@ public class Board {
 		for (int k = 0; k<4 ; k++) {
 			for(int row=0; row<SPACENUM; row++) {
 				for(int col=0; col<SPACENUM; col++) {
-//					this.updateBoard(row, col, EMPTY);
+					if(b.askBoard(row, col) != EMPTY) continue;
 					if (this.askBoard(row, col) >= beforemin && this.askBoard(row, col) < min) {
 						//tmpList안에 있는 좌표일 경우 continue
 						for(Point tmpPoint : tmpList) {

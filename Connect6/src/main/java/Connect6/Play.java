@@ -19,8 +19,8 @@ public class Play {
 	
 	Board board;
 	Board weightBoard;
-	int color = 0;
-	int opponent = 0;
+	int color = -1;
+	int opponent = -1;
 	
 	public static void main(String[] args) throws Exception {
 		
@@ -34,29 +34,38 @@ public class Play {
 		// Board 초기화 및 가중치 초기 계산
 		play.board = new Board();
 		play.weightBoard = new Board();
-		play.updateWeight();
 		
 		String ip = args[0];
 		int port = Integer.parseInt(args[1]);
 		String color = args[2];
-
-		// 적돌 받기
-		ConnectSix conSix = new ConnectSix(ip, port, color);
-		System.out.println("Red Stone positions are " + conSix.redStones);
-		play.board.updateBoard(conSix.redStones, RED);
-		play.updateWeight();
 		
 		if(color.toLowerCase().equals("black")) {
 			play.color = BLACK;
 			play.opponent = WHITE;
+		} else {
+			play.color = WHITE;
+			play.opponent = BLACK;
+		}
+		
+		play.updateWeight();
+		play.weightBoard.printBoard();
+
+		// 적돌 받기
+		ConnectSix conSix = new ConnectSix(ip, port, color);
+		System.out.println("Red Stone positions are " + conSix.redStones);
+		if(conSix.redStones != null) {
+			play.board.updateBoard(conSix.redStones, RED);
+			play.updateWeight();
+		}
+		play.weightBoard.printBoard();
+		
+		if(play.color == BLACK) {
 			play.board.updateBoard("K10", play.color);
 			play.updateWeight();
 			String first = conSix.drawAndRead("K10");
 			play.board.updateBoard(first, play.opponent);
 			play.updateWeight();
 		} else {
-			play.color = WHITE;
-			play.opponent = BLACK;
 			String first = conSix.drawAndRead("");
 			play.board.updateBoard(first, play.opponent);
 			play.updateWeight();
@@ -72,6 +81,8 @@ public class Play {
 			}
 			play.board.updateBoard(read, play.opponent);
 			play.updateWeight();
+			System.out.println("Human");
+			play.weightBoard.printBoard();
 		}
 		
 		// 현재 보드 가중치 계산 - Board
@@ -98,12 +109,13 @@ public class Play {
 		 * 가중치 전체 update (updateWeight() 실행)
 		 * */
 		
-		ArrayList<Point> children = weightBoard.getChildMax();
+		ArrayList<Point> children = weightBoard.getChildMax(new Board(board));
+		System.out.println(children);
 		int max = Integer.MIN_VALUE;
 		Point nextChild = null;
 		int tmp = 0;
 		for(Point child : children) {
-			if((tmp = AlphaBeta.miniMax(weightBoard, child, 3, Integer.MIN_VALUE, Integer.MAX_VALUE, true, color)) > max) {
+			if((tmp = AlphaBeta.miniMax(new Board(board), new Board(weightBoard), child, 0, Integer.MIN_VALUE, Integer.MAX_VALUE, true, color)) > max) {
 				max = tmp;
 				nextChild = child;
 			}
@@ -111,6 +123,8 @@ public class Play {
 		String nextCoord = toCoordinate(nextChild); 
 		this.board.updateBoard(nextCoord, color);
 		this.updateWeight();
+		System.out.println("AI");
+		this.weightBoard.printBoard();
 		
 		return nextCoord;
 	} // kim
@@ -163,6 +177,7 @@ public class Play {
 		int maxfillCount = 0;
 		int maxemptyCount = 0;
 		
+		
 		// 최대 가능성 있는 범위에 있는 내 돌 개수 - 최대 가능성 있는 개수
 		if (direct == VERTICAL) {
 			emptyCount = 0;
@@ -170,8 +185,9 @@ public class Play {
 			maxfillCount = 0;
 			maxemptyCount = 0;
 			
-			checkPoint = start;
-			maxPoint = start; 
+			checkPoint = new Point(start);
+			maxPoint = new Point(start); 
+			
 			
 			for(int i=0; i<6; i++) {
 					checkPoint.x = start.x+i;
@@ -184,7 +200,7 @@ public class Play {
 								fillCount++;
 							}
 						}
-						if(board.askBoard(checkPoint.x, checkPoint.y)==opponent) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==opponent || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
 							if (emptyCount>maxemptyCount) {
 								maxPoint.x = checkPoint.x-emptyCount;
 								maxPoint.y = checkPoint.y;
@@ -196,7 +212,7 @@ public class Play {
 						}
 						if(i==5 && emptyCount!=0) {
 							if (emptyCount>maxemptyCount) {
-								maxPoint.x = checkPoint.x-emptyCount;
+								maxPoint.x = checkPoint.x-emptyCount+1;
 								maxPoint.y = checkPoint.y;
 								maxfillCount = fillCount;
 								maxemptyCount = emptyCount;
@@ -205,14 +221,14 @@ public class Play {
 							fillCount =0;
 						}
 					}else {
-						continue;
+						// TODO
+						break;
 					}
 				
 			}
 			for (int i = 0; i < maxemptyCount;i++) {
-				weightBoard.updateBoard(maxPoint.x+i, maxPoint.y, getScore(maxfillCount,maxemptyCount));
+				weightBoard.addToBoard(maxPoint.x+i, maxPoint.y, getScore(maxfillCount,maxemptyCount));
 			}
-			
 		}
 		if (direct == HORIZONTAL) {
 			emptyCount = 0;
@@ -220,22 +236,22 @@ public class Play {
 			maxfillCount = 0;
 			maxemptyCount = 0;
 			
-			checkPoint = start;
-			maxPoint = start; 
+			checkPoint = new Point(start);
+			maxPoint = new Point(start); 
 			
 			for(int i=0;i<6;i++) {
 					checkPoint.x = start.x;
 					checkPoint.y = start.y+i;
 					
-					if(checkPoint.x<board.SPACENUM&&checkPoint.y<board.SPACENUM) {
+					if(checkPoint.x<board.SPACENUM && checkPoint.y<board.SPACENUM) {
 						if(board.askBoard(checkPoint.x, checkPoint.y)==EMPTY || board.askBoard(checkPoint.x, checkPoint.y)==color) {
 							emptyCount++;
 							if(board.askBoard(checkPoint.x, checkPoint.y)==color) {
 								fillCount++;
 							}
 						}
-						if(board.askBoard(checkPoint.x, checkPoint.y)==opponent) {
-							if (emptyCount>maxemptyCount) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==opponent || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
+							if (emptyCount > maxemptyCount) {
 								maxPoint.x = checkPoint.x;
 								maxPoint.y = checkPoint.y-emptyCount;
 								maxfillCount = fillCount;
@@ -247,7 +263,7 @@ public class Play {
 						if(i==5 && emptyCount!=0) { // 마지막 6번째
 							if (emptyCount>maxemptyCount) {
 								maxPoint.x = checkPoint.x;
-								maxPoint.y = checkPoint.y-emptyCount;
+								maxPoint.y = checkPoint.y-emptyCount+1;
 								maxfillCount = fillCount;
 								maxemptyCount = emptyCount;
 							}
@@ -255,13 +271,12 @@ public class Play {
 							fillCount =0;
 						}
 					}else {
-						continue;
+						break;
 					}
-				
 			}
+
 			for (int i = 0; i < maxemptyCount;i++) {
-				System.out.println("x: " + maxPoint.x + " y: " + (maxPoint.y+i));
-				weightBoard.updateBoard(maxPoint.x, maxPoint.y+i, getScore(maxfillCount,maxemptyCount));
+				weightBoard.addToBoard(maxPoint.x, maxPoint.y+i, getScore(maxfillCount,maxemptyCount));
 			}
 			
 		}
@@ -271,21 +286,21 @@ public class Play {
 			maxfillCount = 0;
 			maxemptyCount = 0;
 			
-			checkPoint = start;
-			maxPoint = start; 
+			checkPoint = new Point(start);
+			maxPoint = new Point(start); 
 			
 			for(int i=0;i<6;i++) {
 					checkPoint.x = start.x-i;
 					checkPoint.y = start.y+i;
 					
-					if(checkPoint.x>0 && checkPoint.x<board.SPACENUM && checkPoint.y<board.SPACENUM) {
+					if(checkPoint.x>=0 && checkPoint.x<board.SPACENUM && checkPoint.y<board.SPACENUM) {
 						if(board.askBoard(checkPoint.x, checkPoint.y)==EMPTY || board.askBoard(checkPoint.x, checkPoint.y)==color) {
 							emptyCount++;
 							if(board.askBoard(checkPoint.x, checkPoint.y)==color) {
 								fillCount++;
 							}
 						}
-						if(board.askBoard(checkPoint.x, checkPoint.y)==opponent) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==opponent || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
 							if (emptyCount>maxemptyCount) {
 								maxPoint.x = checkPoint.x+emptyCount;
 								maxPoint.y = checkPoint.y-emptyCount;
@@ -297,8 +312,8 @@ public class Play {
 						}
 						if(i==5 && emptyCount!=0) {
 							if (emptyCount>maxemptyCount) {
-								maxPoint.x = checkPoint.x+emptyCount;
-								maxPoint.y = checkPoint.y-emptyCount;
+								maxPoint.x = checkPoint.x+emptyCount-1;
+								maxPoint.y = checkPoint.y-emptyCount+1;
 								maxfillCount = fillCount;
 								maxemptyCount = emptyCount;
 							}
@@ -306,12 +321,12 @@ public class Play {
 							fillCount =0;
 						}
 					}else {
-						continue;
+						break;
 					}
 				
 			}
 			for (int i = 0; i < maxemptyCount;i++) {
-				weightBoard.updateBoard(maxPoint.x-i, maxPoint.y+i, getScore(maxfillCount,maxemptyCount));
+				weightBoard.addToBoard(maxPoint.x-i, maxPoint.y+i, getScore(maxfillCount,maxemptyCount));
 			}
 			
 		}
@@ -321,8 +336,8 @@ public class Play {
 			maxfillCount = 0;
 			maxemptyCount = 0;
 			
-			checkPoint = start;
-			maxPoint = start; 
+			checkPoint = new Point(start);
+			maxPoint = new Point(start); 
 			
 			for(int i=0;i<6;i++) {
 					checkPoint.x = start.x+i;
@@ -335,7 +350,7 @@ public class Play {
 								fillCount++;
 							}
 						}
-						if(board.askBoard(checkPoint.x, checkPoint.y)==opponent) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==opponent || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
 							if (emptyCount>maxemptyCount) {
 								maxPoint.x = checkPoint.x-emptyCount;
 								maxPoint.y = checkPoint.y-emptyCount;
@@ -347,8 +362,8 @@ public class Play {
 						}
 						if(i==5 && emptyCount!=0) {
 							if (emptyCount>maxemptyCount) {
-								maxPoint.x = checkPoint.x-emptyCount;
-								maxPoint.y = checkPoint.y-emptyCount;
+								maxPoint.x = checkPoint.x-emptyCount+1;
+								maxPoint.y = checkPoint.y-emptyCount+1;
 								maxfillCount = fillCount;
 								maxemptyCount = emptyCount;
 							}
@@ -356,12 +371,12 @@ public class Play {
 							fillCount =0;
 						}
 					}else {
-						continue;
+						break;
 					}
 				
 			}
 			for (int i = 0; i < maxemptyCount;i++) {
-				weightBoard.updateBoard(maxPoint.x+i, maxPoint.y+i, getScore(maxfillCount, maxemptyCount));
+				weightBoard.addToBoard(maxPoint.x+i, maxPoint.y+i, getScore(maxfillCount, maxemptyCount));
 			}
 			
 		}
