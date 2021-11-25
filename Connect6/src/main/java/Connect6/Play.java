@@ -2,7 +2,6 @@ package Connect6;
 
 import java.awt.Point;
 import java.util.ArrayList;
-import java.util.List;
 
 public class Play {
 
@@ -25,22 +24,6 @@ public class Play {
 
 	
 	public static void main(String[] args) throws Exception {
-		
-//		Play pl = new Play();
-//		
-//		pl.board = new Board();
-//		pl.weightBoard = new Board();
-//		pl.color = WHITE;
-//		pl.opponent = BLACK;
-//		pl.board.updateBoard(0, 0, WHITE);
-//		pl.board.updateBoard(0, 1, WHITE);
-////		pl.board.updateBoard(0, 2, WHITE);
-//		pl.board.updateBoard(0, 3, BLACK);
-//		
-//		pl.checkSix(new Point(0,0), HORIZONTAL);
-//		
-//		pl.weightBoard.printWeight();
-		
 		
 		// 서버 연결
 		if(args.length < 3) {
@@ -65,44 +48,42 @@ public class Play {
 			play.opponent = BLACK;
 		}
 		
-		play.updateWeight();
-		play.weightBoard.printWeight();
-		play.board.updateBoard(0,  0, RED);
-		play.board.updateBoard(0,  1, BLACK);
-		play.board.updateBoard(0,  2, WHITE);
-		play.board.printBoard();
 
 		// 적돌 받기
 		ConnectSix conSix = new ConnectSix(ip, port, color);
 		System.out.println("Red Stone positions are " + conSix.redStones);
 		if(conSix.redStones != null) {
 			play.board.updateBoard(conSix.redStones, RED);
-			play.updateWeight();
+			String[] reds = conSix.redStones.split(":");
+			for(String red : reds)
+				play.updateWeight(red, RED);
 		}
-		play.weightBoard.printWeight();
+//		play.weightBoard.printWeight();
 		
 		if(play.color == BLACK) {
 			play.board.updateBoard("K10", play.color);
-			play.updateWeight();
-			String first = conSix.drawAndRead("K10");
-			play.board.updateBoard(first, play.opponent);
-			play.updateWeight();
+			play.updateWeight("K10", BLACK);
+			String fromWhite = conSix.drawAndRead("K10");
+			play.board.updateBoard(fromWhite, play.opponent);
+			play.updateWeight(fromWhite, WHITE);
 		} else {
-			String first = conSix.drawAndRead("");
-			play.board.updateBoard(first, play.opponent);
-			play.updateWeight();
+			String fromBlack = conSix.drawAndRead("");
+			play.board.updateBoard(fromBlack, play.opponent);
+			play.updateWeight(fromBlack, BLACK);
 		}
 		
 		while(true) {
-			String draw = play.getPosition() + ":" + play.getPosition();
-//			play.board.updateBoard(draw, play.color); // getPosition에서 할 듯
+			String draw = play.getPosition() + ":" + play.getPosition(); // getPosition에서 updateBoard, updateWeight 다함
 			String read = conSix.drawAndRead(draw);
 			if(read.equals("TIE") || read.equals("WIN") || read.equals("LOSE")) {
 				System.out.println("Game End: " + read);
 				break;
 			}
 			play.board.updateBoard(read, play.opponent);
-			play.updateWeight();
+			String[] stones = read.split(":");
+			for(String stone : stones)
+				play.updateWeight(stone, play.opponent);
+			System.out.println("white: " + read);
 			play.weightBoard.printWeight();
 		}
 		
@@ -116,7 +97,7 @@ public class Play {
 		
 	} // kim
 	
-	void Play() {
+	Play() {
 		board = new Board();
 		weightBoard = new Board();
 	}
@@ -132,7 +113,7 @@ public class Play {
 		
 		weightBoard.printWeight();
 		ArrayList<Point> children = weightBoard.getChildMax(new Board(board));
-		System.out.println(children);
+//		System.out.println(children);
 		int max = Integer.MIN_VALUE;
 		Point nextChild = null;
 		int tmp = 0;
@@ -144,9 +125,8 @@ public class Play {
 		}
 		String nextCoord = toCoordinate(nextChild); 
 		this.board.updateBoard(nextCoord, color);
-		this.updateWeight();
+		this.updateWeight(nextCoord, this.color);
 //		this.weightBoard.printWeight();
-		
 		System.out.println(nextCoord);
 		
 		return nextCoord;
@@ -164,8 +144,16 @@ public class Play {
 		
 		return alpha + num;
 	}
+	
+	private Point toPoint(String coord) {
+		String upCoord = coord.toUpperCase();
+		int row = 18 - ((upCoord.charAt(1)-'0')*10 + (upCoord.charAt(2)-'0') -1);
+		int col = upCoord.charAt(0) - 'A';
+		if(col > 7) col--;
+		return new Point(row, col);
+	}
 
-	private void updateWeight() { // 현재 보드 가중치 재계산 [보드 바뀌었어 가중치 update해]
+	private void updateWeight(String position, int colorInterest) { // 현재 보드 가중치 재계산 [보드 바뀌었어 가중치 update해]
 		// 전체 보드에 대해서
 		// 모든 6칸을 모든 방향으로 확인하여 그 6칸에 checkSix 리턴값 더하기
 		/*
@@ -174,24 +162,78 @@ public class Play {
 				그 state에 맞는 가중치를 계산						=> getScore
 				max_empty에 해당하는 칸에 가중치 더하기				=> 여기서
 		 * */
-		for(int i=0; i<board.SPACENUM; i++) {
-			for(int j=0; j<board.SPACENUM; j++) {
-				checkSix(new Point(i, j), VERTICAL);
-				checkSix(new Point(i, j), HORIZONTAL);
-				checkSix(new Point(i, j), RIGHT_DIAGONAL);
-				checkSix(new Point(i, j), LEFT_DIAGONAL);
+		if(colorInterest == this.opponent) {
+//			for(int i=0; i<board.SPACENUM; i++) {
+//				for(int j=0; j<board.SPACENUM; j++) {
+//					checkSixOpponent(new Point(i, j), VERTICAL, this.opponent);
+//					checkSixOpponent(new Point(i, j), HORIZONTAL, this.opponent);
+//					checkSixOpponent(new Point(i, j), RIGHT_DIAGONAL, this.opponent);
+//					checkSixOpponent(new Point(i, j), LEFT_DIAGONAL, this.opponent);
+//					
+//				}
+//			}
+			Point point = toPoint(position);
+			for(int i=0; i<6; i++) {
+				// vertical
+				if(point.x-i >= 0)
+					checkSixOpponent(new Point(point.x-i, point.y), VERTICAL, this.opponent);
+				// horizontal
+				if(point.y-i >= 0)
+					checkSixOpponent(new Point(point.x, point.y-i), HORIZONTAL, this.opponent);
+				// right-diagonal
+				if(point.y-i >= 0 && point.x+i < SPACENUM)
+					checkSixOpponent(new Point(point.x+i, point.y-i), RIGHT_DIAGONAL, this.opponent);
+				// left-diagonal
+				if(point.x-i >=0 && point.y-i >= 0)
+					checkSixOpponent(new Point(point.x-i, point.y-i), LEFT_DIAGONAL, this.opponent);
+			}
+		}
+		else if(colorInterest == this.color){
+			Point point = toPoint(position);
+			for(int i=0; i<6; i++) {
+				// 내 돌에 대한 가중치 더하기
+				// vertical
+				if(point.x-i >= 0)
+					checkSixColor(new Point(point.x-i, point.y), VERTICAL, this.color);
+				// horizontal
+				if(point.y-i >= 0)
+					checkSixColor(new Point(point.x, point.y-i), HORIZONTAL, this.color);
+				// right-diagonal
+				if(point.y-i >= 0 && point.x+i < SPACENUM)
+					checkSixColor(new Point(point.x+i, point.y-i), RIGHT_DIAGONAL, this.color);
+				// left-diagonal
+				if(point.x-i >=0 && point.y-i >= 0)
+					checkSixColor(new Point(point.x-i, point.y-i), LEFT_DIAGONAL, this.color);
+				
+				// 내 돌로 인한 -100000 해주기
+				// vertical
+				if(point.x-i >= 0)
+					checkSixMinus(new Point(point.x-i, point.y), VERTICAL, this.opponent);
+				// horizontal
+				if(point.y-i >= 0)
+					checkSixMinus(new Point(point.x, point.y-i), HORIZONTAL, this.opponent);
+				// right-diagonal
+				if(point.y-i >= 0 && point.x+i < SPACENUM)
+					checkSixMinus(new Point(point.x+i, point.y-i), RIGHT_DIAGONAL, this.opponent);
+				// left-diagonal
+				if(point.x-i >=0 && point.y-i >= 0)
+					checkSixMinus(new Point(point.x-i, point.y-i), LEFT_DIAGONAL, this.opponent);
 				
 			}
 		}
+		else { // red
+			// TODO
+		}
 	} // seo
-
-	/*
-	 * 주어진 6칸에 대하여 state 결정
-	 * return value: 가중치
-	 * */
-	private void checkSix(Point start, int direct) {
+	
+	private void checkSixColor(Point start, int direct, int colorInterest) {
 		// 최대 가능성 있는 범위에 있는 내 돌 개수 - 최대 가능성 있는 개수
 		//y == row
+		
+		int otherColor=-1;
+		if (colorInterest == BLACK) otherColor=WHITE;
+		else if(colorInterest == WHITE) otherColor=BLACK;
+		
 		int emptyCount;
 		int fillCount;
 		Point checkPoint = new Point();
@@ -216,14 +258,14 @@ public class Play {
 					checkPoint.x = start.x+i;
 					checkPoint.y = start.y;
 					
-					if(checkPoint.x<board.SPACENUM&&checkPoint.y<board.SPACENUM) {
-						if(board.askBoard(checkPoint.x, checkPoint.y)==EMPTY || board.askBoard(checkPoint.x, checkPoint.y)==opponent) {
+					if(checkPoint.x<Board.SPACENUM&&checkPoint.y<Board.SPACENUM) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==EMPTY || board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
 							emptyCount++;
-							if(board.askBoard(checkPoint.x, checkPoint.y)==opponent) {
+							if(board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
 								fillCount++;
 							}
 						}
-						if(board.askBoard(checkPoint.x, checkPoint.y)==color || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==otherColor || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
 							if (emptyCount>maxemptyCount) {
 								maxPoint.x = checkPoint.x-emptyCount;
 								maxPoint.y = checkPoint.y;
@@ -244,21 +286,13 @@ public class Play {
 							fillCount =0;
 						}
 					}else {
-						// TODO
-						break;
+						return;
 					}
 				
 			}
 			for (int i = 0; i < maxemptyCount;i++) {
-				weightBoard.addToBoard(maxPoint.x+i, maxPoint.y, getScore(maxfillCount,maxemptyCount));
+				weightBoard.addToBoard(maxPoint.x+i, maxPoint.y, getScoreColor(maxfillCount,maxemptyCount));
 			}
-//			for(int i=0; i<6; i++) {
-//				if(start.x+i < maxPoint.x || start.x+i > maxPoint.x+maxemptyCount-1) {
-//					weightBoard.addToBoard(start.x+i, start.y, -getScore(maxfillCount, maxemptyCount));
-//				} else {
-//					weightBoard.addToBoard(start.x+i, start.y, getScore(maxfillCount, maxemptyCount));
-//				}
-//			}
 		}
 		if (direct == HORIZONTAL) {
 			emptyCount = 0;
@@ -273,14 +307,14 @@ public class Play {
 					checkPoint.x = start.x;
 					checkPoint.y = start.y+i;
 					
-					if(checkPoint.x<board.SPACENUM && checkPoint.y<board.SPACENUM) {
-						if(board.askBoard(checkPoint.x, checkPoint.y)==EMPTY || board.askBoard(checkPoint.x, checkPoint.y)==opponent) {
+					if(checkPoint.x<Board.SPACENUM && checkPoint.y<Board.SPACENUM) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==EMPTY || board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
 							emptyCount++;
-							if(board.askBoard(checkPoint.x, checkPoint.y)==opponent) {
+							if(board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
 								fillCount++;
 							}
 						}
-						if(board.askBoard(checkPoint.x, checkPoint.y)==color || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==otherColor || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
 							if (emptyCount > maxemptyCount) {
 								maxPoint.x = checkPoint.x;
 								maxPoint.y = checkPoint.y-emptyCount;
@@ -301,21 +335,13 @@ public class Play {
 							fillCount =0;
 						}
 					}else {
-						break;
+						return;
 					}
 			}
 
 			for (int i = 0; i < maxemptyCount;i++) {
-				weightBoard.addToBoard(maxPoint.x, maxPoint.y+i, getScore(maxfillCount,maxemptyCount));
+				weightBoard.addToBoard(maxPoint.x, maxPoint.y+i, getScoreColor(maxfillCount,maxemptyCount));
 			}
-			
-//			for(int i=0; i<6; i++) {
-//				if(start.y+i < maxPoint.y || start.y+i > maxPoint.y+maxemptyCount-1) {
-//					weightBoard.addToBoard(start.x, start.y+i, -getScore(maxfillCount, maxemptyCount));
-//				} else {
-//					weightBoard.addToBoard(start.x, start.y+i, getScore(maxfillCount, maxemptyCount));
-//				}
-//			}
 			
 		}
 		if (direct == RIGHT_DIAGONAL) { //lb to rt
@@ -331,14 +357,14 @@ public class Play {
 					checkPoint.x = start.x-i;
 					checkPoint.y = start.y+i;
 					
-					if(checkPoint.x>=0 && checkPoint.x<board.SPACENUM && checkPoint.y<board.SPACENUM) {
-						if(board.askBoard(checkPoint.x, checkPoint.y)==EMPTY || board.askBoard(checkPoint.x, checkPoint.y)==opponent) {
+					if(checkPoint.x>=0 && checkPoint.x<Board.SPACENUM && checkPoint.y<Board.SPACENUM) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==EMPTY || board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
 							emptyCount++;
-							if(board.askBoard(checkPoint.x, checkPoint.y)==opponent) {
+							if(board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
 								fillCount++;
 							}
 						}
-						if(board.askBoard(checkPoint.x, checkPoint.y)==color || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==otherColor || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
 							if (emptyCount>maxemptyCount) {
 								maxPoint.x = checkPoint.x+emptyCount;
 								maxPoint.y = checkPoint.y-emptyCount;
@@ -359,21 +385,13 @@ public class Play {
 							fillCount =0;
 						}
 					}else {
-						break;
+						return;
 					}
 				
 			}
 			for (int i = 0; i < maxemptyCount;i++) {
-				weightBoard.addToBoard(maxPoint.x-i, maxPoint.y+i, getScore(maxfillCount,maxemptyCount));
+				weightBoard.addToBoard(maxPoint.x-i, maxPoint.y+i, getScoreColor(maxfillCount,maxemptyCount));
 			}
-			
-//			for(int i=0; i<6; i++) {
-//				if(start.x-i >= 0 && start.y+i < maxPoint.y || start.y+i > maxPoint.y+maxemptyCount-1) {
-//					weightBoard.addToBoard(start.x-i, start.y+i, -getScore(maxfillCount, maxemptyCount));
-//				} else if (start.x-i >= 0){
-//					weightBoard.addToBoard(start.x-i, start.y+i, getScore(maxfillCount, maxemptyCount));
-//				}
-//			}
 			
 		}
 		if (direct == LEFT_DIAGONAL) { //lt to rb
@@ -389,14 +407,14 @@ public class Play {
 					checkPoint.x = start.x+i;
 					checkPoint.y = start.y+i;
 					
-					if(checkPoint.x<board.SPACENUM&&checkPoint.y<board.SPACENUM) {
-						if(board.askBoard(checkPoint.x, checkPoint.y)==EMPTY || board.askBoard(checkPoint.x, checkPoint.y)==opponent) {
+					if(checkPoint.x<Board.SPACENUM&&checkPoint.y<Board.SPACENUM) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==EMPTY || board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
 							emptyCount++;
-							if(board.askBoard(checkPoint.x, checkPoint.y)==opponent) {
+							if(board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
 								fillCount++;
 							}
 						}
-						if(board.askBoard(checkPoint.x, checkPoint.y)==color || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==otherColor || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
 							if (emptyCount>maxemptyCount) {
 								maxPoint.x = checkPoint.x-emptyCount;
 								maxPoint.y = checkPoint.y-emptyCount;
@@ -417,32 +435,511 @@ public class Play {
 							fillCount =0;
 						}
 					}else {
-						break;
+						return;
 					}
 				
 			}
 			for (int i = 0; i < maxemptyCount;i++) {
-				weightBoard.addToBoard(maxPoint.x+i, maxPoint.y+i, getScore(maxfillCount, maxemptyCount));
+				weightBoard.addToBoard(maxPoint.x+i, maxPoint.y+i, getScoreColor(maxfillCount, maxemptyCount));
 			}
 			
-//			for(int i=0; i<6; i++) {
-//				if(start.y+i < maxPoint.y || start.y+i > maxPoint.y+maxemptyCount-1) {
-//					weightBoard.addToBoard(start.x+i, start.y+i, -getScore(maxfillCount, maxemptyCount));
-//				} else {
-//					weightBoard.addToBoard(start.x+i, start.y+i, getScore(maxfillCount, maxemptyCount));
-//				}
+		}
+		
+		return;
+	} // seo
+
+	/*
+	 * 주어진 6칸에 대하여 state 결정
+	 * return value: 가중치
+	 * */
+	private void checkSixOpponent(Point start, int direct, int colorInterest) {
+		// 최대 가능성 있는 범위에 있는 내 돌 개수 - 최대 가능성 있는 개수
+		//y == row
+		
+		int otherColor=-1;
+		if (colorInterest == BLACK) otherColor=WHITE;
+		else if(colorInterest == WHITE) otherColor=BLACK;
+		
+		int emptyCount;
+		int fillCount;
+		Point checkPoint = new Point();
+		
+		Point maxPoint = new Point();//max empty start point
+		int maxfillCount = 0;
+		int maxemptyCount = 0;
+		
+		
+		// 최대 가능성 있는 범위에 있는 내 돌 개수 - 최대 가능성 있는 개수
+		if (direct == VERTICAL) {
+			emptyCount = 0;
+			fillCount = 0;
+			maxfillCount = 0;
+			maxemptyCount = 0;
+			
+			checkPoint = new Point(start);
+			maxPoint = new Point(start); 
+			
+			
+			for(int i=0; i<6; i++) {
+					checkPoint.x = start.x+i;
+					checkPoint.y = start.y;
+					
+					if(checkPoint.x<Board.SPACENUM&&checkPoint.y<Board.SPACENUM) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==EMPTY || board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
+							emptyCount++;
+							if(board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
+								fillCount++;
+							}
+						}
+						if(board.askBoard(checkPoint.x, checkPoint.y)==otherColor || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
+							if (emptyCount>maxemptyCount) {
+								maxPoint.x = checkPoint.x-emptyCount;
+								maxPoint.y = checkPoint.y;
+								maxfillCount = fillCount;
+								maxemptyCount = emptyCount;
+							}
+							emptyCount = 0;
+							fillCount =0;
+						}
+						if(i==5 && emptyCount!=0) {
+							if (emptyCount>maxemptyCount) {
+								maxPoint.x = checkPoint.x-emptyCount+1;
+								maxPoint.y = checkPoint.y;
+								maxfillCount = fillCount;
+								maxemptyCount = emptyCount;
+							}
+							emptyCount = 0;
+							fillCount =0;
+						}
+					}else {
+						return;
+					}
+				
+			}
+//			for (int i = 0; i < maxemptyCount;i++) {
+//				weightBoard.addToBoard(maxPoint.x+i, maxPoint.y, getScoreOpponent(maxfillCount,maxemptyCount));
 //			}
+			for(int i=0; i<6; i++) {
+				if(start.x+i<SPACENUM && (start.x+i < maxPoint.x || start.x+i > maxPoint.x+maxemptyCount-1)) { // 점수 더해주는 범위 밖
+					if(weightBoard.askBoard(start.x+i, start.y) >= 100000) {
+						weightBoard.addToBoard(start.x+i, start.y, -100000);
+					}
+				}
+				else { // 점수 더해주는 범위 안
+					weightBoard.addToBoard(start.x+i, start.y, getScoreOpponent(maxfillCount,maxemptyCount));
+				}
+			}
+		}
+		if (direct == HORIZONTAL) {
+			emptyCount = 0;
+			fillCount = 0;
+			maxfillCount = 0;
+			maxemptyCount = 0;
+			
+			checkPoint = new Point(start);
+			maxPoint = new Point(start); 
+			
+			for(int i=0;i<6;i++) {
+					checkPoint.x = start.x;
+					checkPoint.y = start.y+i;
+					
+					if(checkPoint.x<Board.SPACENUM && checkPoint.y<Board.SPACENUM) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==EMPTY || board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
+							emptyCount++;
+							if(board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
+								fillCount++;
+							}
+						}
+						if(board.askBoard(checkPoint.x, checkPoint.y)==otherColor || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
+							if (emptyCount > maxemptyCount) {
+								maxPoint.x = checkPoint.x;
+								maxPoint.y = checkPoint.y-emptyCount;
+								maxfillCount = fillCount;
+								maxemptyCount = emptyCount;
+							}
+							emptyCount = 0;
+							fillCount =0;
+						}
+						if(i==5 && emptyCount!=0) { // 마지막 6번째
+							if (emptyCount>maxemptyCount) {
+								maxPoint.x = checkPoint.x;
+								maxPoint.y = checkPoint.y-emptyCount+1;
+								maxfillCount = fillCount;
+								maxemptyCount = emptyCount;
+							}
+							emptyCount = 0;
+							fillCount =0;
+						}
+					}else {
+						return;
+					}
+			}
+
+			for (int i = 0; i < maxemptyCount;i++) {
+				weightBoard.addToBoard(maxPoint.x, maxPoint.y+i, getScoreOpponent(maxfillCount,maxemptyCount));
+			}
+			
+		}
+		if (direct == RIGHT_DIAGONAL) { //lb to rt
+			emptyCount = 0;
+			fillCount = 0;
+			maxfillCount = 0;
+			maxemptyCount = 0;
+			
+			checkPoint = new Point(start);
+			maxPoint = new Point(start); 
+			
+			for(int i=0;i<6;i++) {
+					checkPoint.x = start.x-i;
+					checkPoint.y = start.y+i;
+					
+					if(checkPoint.x>=0 && checkPoint.x<Board.SPACENUM && checkPoint.y<Board.SPACENUM) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==EMPTY || board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
+							emptyCount++;
+							if(board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
+								fillCount++;
+							}
+						}
+						if(board.askBoard(checkPoint.x, checkPoint.y)==otherColor || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
+							if (emptyCount>maxemptyCount) {
+								maxPoint.x = checkPoint.x+emptyCount;
+								maxPoint.y = checkPoint.y-emptyCount;
+								maxfillCount = fillCount;
+								maxemptyCount = emptyCount;
+							}
+							emptyCount = 0;
+							fillCount =0;
+						}
+						if(i==5 && emptyCount!=0) {
+							if (emptyCount>maxemptyCount) {
+								maxPoint.x = checkPoint.x+emptyCount-1;
+								maxPoint.y = checkPoint.y-emptyCount+1;
+								maxfillCount = fillCount;
+								maxemptyCount = emptyCount;
+							}
+							emptyCount = 0;
+							fillCount =0;
+						}
+					}else {
+						return;
+					}
+				
+			}
+			for (int i = 0; i < maxemptyCount;i++) {
+				weightBoard.addToBoard(maxPoint.x-i, maxPoint.y+i, getScoreOpponent(maxfillCount,maxemptyCount));
+			}
+			
+			
+		}
+		if (direct == LEFT_DIAGONAL) { //lt to rb
+			emptyCount = 0;
+			fillCount = 0;
+			maxfillCount = 0;
+			maxemptyCount = 0;
+			
+			checkPoint = new Point(start);
+			maxPoint = new Point(start); 
+			
+			for(int i=0;i<6;i++) {
+					checkPoint.x = start.x+i;
+					checkPoint.y = start.y+i;
+					
+					if(checkPoint.x<Board.SPACENUM&&checkPoint.y<Board.SPACENUM) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==EMPTY || board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
+							emptyCount++;
+							if(board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
+								fillCount++;
+							}
+						}
+						if(board.askBoard(checkPoint.x, checkPoint.y)==otherColor || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
+							if (emptyCount>maxemptyCount) {
+								maxPoint.x = checkPoint.x-emptyCount;
+								maxPoint.y = checkPoint.y-emptyCount;
+								maxfillCount = fillCount;
+								maxemptyCount = emptyCount;
+							}
+							emptyCount = 0;
+							fillCount =0;
+						}
+						if(i==5 && emptyCount!=0) {
+							if (emptyCount>maxemptyCount) {
+								maxPoint.x = checkPoint.x-emptyCount+1;
+								maxPoint.y = checkPoint.y-emptyCount+1;
+								maxfillCount = fillCount;
+								maxemptyCount = emptyCount;
+							}
+							emptyCount = 0;
+							fillCount =0;
+						}
+					}else {
+						return;
+					}
+				
+			}
+			for (int i = 0; i < maxemptyCount;i++) {
+				weightBoard.addToBoard(maxPoint.x+i, maxPoint.y+i, getScoreOpponent(maxfillCount, maxemptyCount));
+			}
 			
 		}
 		
 		return;
 	} // seo
 	
-	/*
-	 * state에 따라 가중치 리턴 ex) 1-6, 0-3 (0~6)
-	 * return value: 가중치
-	 */
-//	public int getScore(int count, int maxEmpty) {
+	private void checkSixMinus(Point start, int direct, int colorInterest) {
+		// 최대 가능성 있는 범위에 있는 내 돌 개수 - 최대 가능성 있는 개수
+		//y == row
+		
+		int otherColor=-1;
+		if (colorInterest == BLACK) otherColor=WHITE;
+		else if(colorInterest == WHITE) otherColor=BLACK;
+		
+		int emptyCount;
+		int fillCount;
+		Point checkPoint = new Point();
+		
+		Point maxPoint = new Point();//max empty start point
+		int maxfillCount = 0;
+		int maxemptyCount = 0;
+		
+		
+		// 최대 가능성 있는 범위에 있는 내 돌 개수 - 최대 가능성 있는 개수
+		if (direct == VERTICAL) {
+			emptyCount = 0;
+			fillCount = 0;
+			maxfillCount = 0;
+			maxemptyCount = 0;
+			
+			checkPoint = new Point(start);
+			maxPoint = new Point(start); 
+			
+			
+			for(int i=0; i<6; i++) {
+					checkPoint.x = start.x+i;
+					checkPoint.y = start.y;
+					
+					if(checkPoint.x<Board.SPACENUM&&checkPoint.y<Board.SPACENUM) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==EMPTY || board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
+							emptyCount++;
+							if(board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
+								fillCount++;
+							}
+						}
+						if(board.askBoard(checkPoint.x, checkPoint.y)==otherColor || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
+							if (emptyCount>maxemptyCount) {
+								maxPoint.x = checkPoint.x-emptyCount;
+								maxPoint.y = checkPoint.y;
+								maxfillCount = fillCount;
+								maxemptyCount = emptyCount;
+							}
+							emptyCount = 0;
+							fillCount =0;
+						}
+						if(i==5 && emptyCount!=0) {
+							if (emptyCount>maxemptyCount) {
+								maxPoint.x = checkPoint.x-emptyCount+1;
+								maxPoint.y = checkPoint.y;
+								maxfillCount = fillCount;
+								maxemptyCount = emptyCount;
+							}
+							emptyCount = 0;
+							fillCount =0;
+						}
+					}else {
+						return;
+					}
+				
+			}
+//			for (int i = 0; i < maxemptyCount;i++) {
+//				weightBoard.addToBoard(maxPoint.x+i, maxPoint.y, getScoreOpponent(maxfillCount,maxemptyCount));
+//			}
+			for(int i=0; i<6; i++) {
+				if(start.x+i<SPACENUM && (start.x+i < maxPoint.x || start.x+i > maxPoint.x+maxemptyCount-1)) { // 점수 더해주는 범위 밖
+					if(weightBoard.askBoard(start.x+i, start.y) >= 100000) {
+						weightBoard.addToBoard(start.x+i, start.y, -100000);
+					}
+				}
+			}
+		}
+		if (direct == HORIZONTAL) {
+			emptyCount = 0;
+			fillCount = 0;
+			maxfillCount = 0;
+			maxemptyCount = 0;
+			
+			checkPoint = new Point(start);
+			maxPoint = new Point(start); 
+			
+			for(int i=0;i<6;i++) {
+					checkPoint.x = start.x;
+					checkPoint.y = start.y+i;
+					
+					if(checkPoint.x<Board.SPACENUM && checkPoint.y<Board.SPACENUM) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==EMPTY || board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
+							emptyCount++;
+							if(board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
+								fillCount++;
+							}
+						}
+						if(board.askBoard(checkPoint.x, checkPoint.y)==otherColor || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
+							if (emptyCount > maxemptyCount) {
+								maxPoint.x = checkPoint.x;
+								maxPoint.y = checkPoint.y-emptyCount;
+								maxfillCount = fillCount;
+								maxemptyCount = emptyCount;
+							}
+							emptyCount = 0;
+							fillCount =0;
+						}
+						if(i==5 && emptyCount!=0) { // 마지막 6번째
+							if (emptyCount>maxemptyCount) {
+								maxPoint.x = checkPoint.x;
+								maxPoint.y = checkPoint.y-emptyCount+1;
+								maxfillCount = fillCount;
+								maxemptyCount = emptyCount;
+							}
+							emptyCount = 0;
+							fillCount =0;
+						}
+					}else {
+						return;
+					}
+			}
+
+//			for (int i = 0; i < maxemptyCount;i++) {
+//				weightBoard.addToBoard(maxPoint.x, maxPoint.y+i, getScoreOpponent(maxfillCount,maxemptyCount));
+//			}
+			for(int i=0; i<6; i++) {
+				if(start.y+i<SPACENUM && (start.y+i < maxPoint.y || start.y+i > maxPoint.y+maxemptyCount-1)) {
+					if(weightBoard.askBoard(start.x, start.y+i) >= 100000) {
+						weightBoard.addToBoard(start.x, start.y+i, -100000);
+					}
+				}
+			}
+			
+		}
+		if (direct == RIGHT_DIAGONAL) { //lb to rt
+			emptyCount = 0;
+			fillCount = 0;
+			maxfillCount = 0;
+			maxemptyCount = 0;
+			
+			checkPoint = new Point(start);
+			maxPoint = new Point(start); 
+			
+			for(int i=0;i<6;i++) {
+					checkPoint.x = start.x-i;
+					checkPoint.y = start.y+i;
+					
+					if(checkPoint.x>=0 && checkPoint.x<Board.SPACENUM && checkPoint.y<Board.SPACENUM) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==EMPTY || board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
+							emptyCount++;
+							if(board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
+								fillCount++;
+							}
+						}
+						if(board.askBoard(checkPoint.x, checkPoint.y)==otherColor || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
+							if (emptyCount>maxemptyCount) {
+								maxPoint.x = checkPoint.x+emptyCount;
+								maxPoint.y = checkPoint.y-emptyCount;
+								maxfillCount = fillCount;
+								maxemptyCount = emptyCount;
+							}
+							emptyCount = 0;
+							fillCount =0;
+						}
+						if(i==5 && emptyCount!=0) {
+							if (emptyCount>maxemptyCount) {
+								maxPoint.x = checkPoint.x+emptyCount-1;
+								maxPoint.y = checkPoint.y-emptyCount+1;
+								maxfillCount = fillCount;
+								maxemptyCount = emptyCount;
+							}
+							emptyCount = 0;
+							fillCount =0;
+						}
+					}else {
+						return;
+					}
+				
+			}
+//			for (int i = 0; i < maxemptyCount;i++) {
+//				weightBoard.addToBoard(maxPoint.x-i, maxPoint.y+i, getScoreOpponent(maxfillCount,maxemptyCount));
+//			}
+			for(int i=0; i<6; i++) {
+				if(start.x-i >=0 && start.y+i<SPACENUM && (start.y+i < maxPoint.y || start.y+i > maxPoint.y+maxemptyCount-1)) {
+					if(weightBoard.askBoard(start.x-i, start.y+i) >= 100000) {
+						weightBoard.addToBoard(start.x-i, start.y+i, -100000);
+					}
+				}
+			}
+			
+		}
+		if (direct == LEFT_DIAGONAL) { //lt to rb
+			emptyCount = 0;
+			fillCount = 0;
+			maxfillCount = 0;
+			maxemptyCount = 0;
+			
+			checkPoint = new Point(start);
+			maxPoint = new Point(start); 
+			
+			for(int i=0;i<6;i++) {
+					checkPoint.x = start.x+i;
+					checkPoint.y = start.y+i;
+					
+					if(checkPoint.x<Board.SPACENUM&&checkPoint.y<Board.SPACENUM) {
+						if(board.askBoard(checkPoint.x, checkPoint.y)==EMPTY || board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
+							emptyCount++;
+							if(board.askBoard(checkPoint.x, checkPoint.y)==colorInterest) {
+								fillCount++;
+							}
+						}
+						if(board.askBoard(checkPoint.x, checkPoint.y)==otherColor || board.askBoard(checkPoint.x, checkPoint.y)==RED) {
+							if (emptyCount>maxemptyCount) {
+								maxPoint.x = checkPoint.x-emptyCount;
+								maxPoint.y = checkPoint.y-emptyCount;
+								maxfillCount = fillCount;
+								maxemptyCount = emptyCount;
+							}
+							emptyCount = 0;
+							fillCount =0;
+						}
+						if(i==5 && emptyCount!=0) {
+							if (emptyCount>maxemptyCount) {
+								maxPoint.x = checkPoint.x-emptyCount+1;
+								maxPoint.y = checkPoint.y-emptyCount+1;
+								maxfillCount = fillCount;
+								maxemptyCount = emptyCount;
+							}
+							emptyCount = 0;
+							fillCount =0;
+						}
+					}else {
+						return;
+					}
+				
+			}
+//			for (int i = 0; i < maxemptyCount;i++) {
+//				weightBoard.addToBoard(maxPoint.x+i, maxPoint.y+i, getScoreOpponent(maxfillCount, maxemptyCount));
+//			}
+			for(int i=0; i<6; i++) {
+				if(start.x+i <SPACENUM && start.y+i<SPACENUM && (start.y+i < maxPoint.y || start.y+i > maxPoint.y+maxemptyCount-1)) {
+					if(weightBoard.askBoard(start.x+i, start.y+i) >= 100000) {
+						weightBoard.addToBoard(start.x+i, start.y+i, -100000);
+					}
+				}
+			}
+			
+		}
+		
+		return;
+	} // seo
+	
+//	/*
+//	 * state에 따라 가중치 리턴 ex) 1-6, 0-3 (0~6)
+//	 * return value: 가중치
+//	 */
+//	public int getScoreOpponent(int count, int maxEmpty) {
 //		switch (count){
 //		case 5:
 //			switch (maxEmpty) {
@@ -514,9 +1011,86 @@ public class Play {
 //		
 //		return 0;	
 //	} // 6칸 짜리 값 업데이트 // start - 시작 위치; direct - 방향 
-	// seo
+//	// seo
+//	
+//	public int getScoreColor(int count, int maxEmpty) {
+//		switch (count){
+//		case 5:
+//			switch (maxEmpty) {
+//			case 6: // 5-6
+//				return 100000; // winning position
+//			}
+//			break;
+//		case 4:
+//			switch (maxEmpty) {
+//			case 5: // 4-5
+//				return 26*3/4;
+//			case 6:
+//				return 100000; // winning position
+//			}
+//			break;
+//		case 3:
+//			switch (maxEmpty) {
+//			case 4:
+//				return 19*3/4;
+//			case 5:
+//				return 23*3/4;
+//			case 6:
+//				return 27*3/4;
+//			}
+//			break;
+//		case 2:
+//			switch (maxEmpty) {
+//			case 3:
+//				return 13*3/4;
+//			case 4:
+//				return 16*3/4;
+//			case 5:
+//				return 20*3/4;
+//			case 6:
+//				return 24*3/4;
+//			}
+//			break;
+//		case 1:
+//			switch (maxEmpty) {
+//			case 2:
+//				return 8*3/4;
+//			case 3:
+//				return 11*3/4;
+//			case 4:
+//				return 14*3/4;
+//			case 5:
+//				return 17*3/4;
+//			case 6:
+//				return 21*3/4;
+//			}
+//			break;
+//		case 0:
+//			switch (maxEmpty) {
+//			case 1:
+//				return 3*3/4;
+//			case 2:
+//				return 6*3/4;
+//			case 3:
+//				return 9*3/4;
+//			case 4:
+//				return 12*3/4;
+//			case 5:
+//				return 15*3/4;
+//			case 6:
+//				return 18*3/4;
+//			}
+//			break;
+//		}
+//		
+//		return 0;	
+//	} // 6칸 짜리 값 업데이트 // start - 시작 위치; direct - 방향 
+//	// seo
 	
-	public int getScore(int count, int maxEmpty) {
+	
+	// -- 2 --
+	
+	public int getScoreOpponent(int count, int maxEmpty) {
 		switch (count){
 		case 5:
 			switch (maxEmpty) {
@@ -589,16 +1163,76 @@ public class Play {
 		return 0;	
 	} // 6칸 짜리 값 업데이트 // start - 시작 위치; direct - 방향 
 	
-	public class ANSIConstants {
-		  public static final String ANSI_RESET = "\u001B[0m";
-		  public static final String ANSI_BLACK = "\u001B[30m";
-		  public static final String ANSI_RED = "\u001B[31m";
-		  public static final String ANSI_GREEN = "\u001B[32m";
-		  public static final String ANSI_YELLOW = "\u001B[33m";
-		  public static final String ANSI_BLUE = "\u001B[34m";
-		  public static final String ANSI_PURPLE = "\u001B[35m";
-		  public static final String ANSI_CYAN = "\u001B[36m";
-		  public static final String ANSI_WHITE = "\u001B[37m";
+	public int getScoreColor(int count, int maxEmpty) {
+		switch (count){
+		case 5:
+			switch (maxEmpty) {
+			case 6: // 5-6
+				return 10000000; // winning position
+			}
+			break;
+		case 4:
+			switch (maxEmpty) {
+			case 5: // 4-5
+				return 27*3/4;
+			case 6:
+				return 10000000; // winning position
+			}
+			break;
+		case 3:
+			switch (maxEmpty) {
+			case 4:
+				return 21*3/4;
+			case 5:
+				return 24*3/4;
+			case 6:
+				return 26*3/4;
+			}
+			break;
+		case 2:
+			switch (maxEmpty) {
+			case 3:
+				return 15*3/4;
+			case 4:
+				return 18*3/4;
+			case 5:
+				return 20*3/4;
+			case 6:
+				return 23*3/4;
+			}
+			break;
+		case 1:
+			switch (maxEmpty) {
+			case 2:
+				return 9*3/4;
+			case 3:
+				return 12*3/4;
+			case 4:
+				return 14*3/4;
+			case 5:
+				return 17*3/4;
+			case 6:
+				return 19*3/4;
+			}
+			break;
+		case 0:
+			switch (maxEmpty) {
+			case 1:
+				return 3*3/4;
+			case 2:
+				return 6*3/4;
+			case 3:
+				return 8*3/4;
+			case 4:
+				return 11*3/4;
+			case 5:
+				return 13*3/4;
+			case 6:
+				return 16*3/4;
+			}
+			break;
 		}
-	
+		
+		return 0;	
+	} // 6칸 짜리 값 업데이트 // start - 시작 위치; direct - 방향 
 }
